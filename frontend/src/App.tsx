@@ -42,11 +42,13 @@ export default function App() {
   const ws = useWebSocket();
 
   const [pendingApproval, setPendingApproval] = useState<{
+    executionId?: string;
     nodeId: string;
     nodeLabel: string;
     actionDescription: string;
-    estimatedCost: number;
+    estimatedCost?: number;
   } | null>(null);
+  const currentExecutionId = useRef<string | null>(null);
 
   const [showHistory, setShowHistory] = useState(false);
   const [runs, setRuns] = useState<RunSummary[]>([]);
@@ -70,20 +72,22 @@ export default function App() {
     const handleMessage = (event: MessageEvent) => {
       const msg = JSON.parse(event.data);
 
-      if (msg.type === 'node:awaiting_approval') {
-        setPendingApproval({
-          nodeId: msg.nodeId,
-          nodeLabel: msg.nodeLabel,
-          actionDescription: msg.actionDescription,
-          estimatedCost: msg.estimatedCost,
-        });
-      }
-
       if (msg.type === 'execution:started') {
+        currentExecutionId.current = msg.executionId;
         setRuns([]);
         const curNodes = nodesRef.current;
         curNodes.forEach(n => {
           if (n.type === 'output') updateNodeData(n.id, { lastOutput: '' });
+        });
+      }
+
+      if (msg.type === 'node:awaiting_approval') {
+        setPendingApproval({
+          executionId: msg.executionId || currentExecutionId.current || undefined,
+          nodeId: msg.nodeId,
+          nodeLabel: msg.nodeLabel,
+          actionDescription: msg.actionDescription,
+          estimatedCost: msg.estimatedCost,
         });
       }
 

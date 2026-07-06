@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+/// <reference types="vite/client" />
+import { useEffect, useState, useRef } from 'react';
 
 let wsInstance: WebSocket | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<(ws: WebSocket) => void>();
 
 function onInstanceReady(cb: (ws: WebSocket) => void) {
@@ -11,6 +13,30 @@ function onInstanceReady(cb: (ws: WebSocket) => void) {
   }
 }
 
+function createConnection() {
+  if (wsInstance) return;
+  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
+  const socket = new WebSocket(wsUrl);
+
+  socket.onopen = () => {
+    console.log('[WS] Connected');
+    wsInstance = socket;
+    listeners.forEach(cb => cb(socket));
+    listeners.clear();
+  };
+
+  socket.onclose = () => {
+    console.log('[WS] Disconnected');
+    wsInstance = null;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(createConnection, 3000);
+  };
+
+  socket.onerror = () => {};
+
+  wsInstance = socket;
+}
+
 export function useWebSocket() {
   const [ws, setWs] = useState<WebSocket | null>(null);
 
@@ -19,33 +45,13 @@ export function useWebSocket() {
       setWs(wsInstance);
       return;
     }
-
     if (wsInstance) {
       onInstanceReady(setWs);
       return;
     }
-
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
-    const socket = new WebSocket(wsUrl);
-
-    socket.onopen = () => {
-      console.log('[WS] Connected');
-      wsInstance = socket;
-      setWs(socket);
-      listeners.forEach(cb => cb(socket));
-      listeners.clear();
-    };
-
-    socket.onclose = () => {
-      console.log('[WS] Disconnected');
-      wsInstance = null;
-    };
-
-    socket.onerror = (err) => {
-      console.error('[WS] Error:', err);
-    };
-
-    wsInstance = socket;
+    createConnection();
+    onInstanceReady(setWs);
+    return () => {};
   }, []);
 
   return ws;

@@ -1,17 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 export class ClaudeService {
-  constructor() {
-    this.anthropic = new Anthropic({
+  async streamCompletion({ systemPrompt, model, maxTokens, temperature, prompt, onDelta }) {
+    const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
-  }
-
-  async streamCompletion({ systemPrompt, model, maxTokens, temperature, prompt, onDelta }) {
     let fullText = '';
     let usage = null;
 
-    const stream = await this.anthropic.messages.stream({
+    const stream = await anthropic.messages.stream({
       model,
       max_tokens: maxTokens,
       system: systemPrompt,

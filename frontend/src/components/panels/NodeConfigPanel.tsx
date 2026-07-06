@@ -103,6 +103,7 @@ export default function NodeConfigPanel() {
               onChange={(e) => updateNodeData(selectedNodeId, { model: e.target.value })}
               className="w-full px-2 py-1 border rounded text-xs"
             >
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
               <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
               <option value="gemini-2.0-pro">Gemini 2.0 Pro</option>
               <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
@@ -223,17 +224,29 @@ export default function NodeConfigPanel() {
       )}
 
       {type === 'output' && (
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Template</label>
-          <textarea
-            value={data.value || ''}
-            onChange={(e) => updateNodeData(selectedNodeId, { value: e.target.value })}
-            placeholder="{{input}}"
-            rows={3}
-            className="w-full px-2 py-1 border rounded text-xs resize-none"
-          />
-          <p className="text-xs text-gray-500 mt-1">Use {'{{handle}}'} to interpolate connected node output</p>
-        </div>
+        <>
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Label</label>
+            <input
+              type="text"
+              value={data.label || ''}
+              onChange={(e) => updateNodeData(selectedNodeId, { label: e.target.value })}
+              placeholder="e.g. Claude Summary"
+              className="w-full px-2 py-1 border rounded text-xs"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Template</label>
+            <textarea
+              value={data.value || ''}
+              onChange={(e) => updateNodeData(selectedNodeId, { value: e.target.value })}
+              placeholder="{{input}}"
+              rows={3}
+              className="w-full px-2 py-1 border rounded text-xs resize-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">Use {'{{handle}}'} to interpolate connected node output</p>
+          </div>
+        </>
       )}
     </div>
   );

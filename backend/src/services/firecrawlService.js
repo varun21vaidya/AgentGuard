@@ -4,12 +4,12 @@ export class FirecrawlService {
   async search(query, limit = 10) {
     const body = { query, limit };
     const res = await this._request('/search', body);
-    const data = res.data || [];
+    const data = res.data?.web || [];
     return data.map(d => ({
       title: d.title || '',
       url: d.url || '',
       description: d.description || '',
-      content: d.markdown || '',
+      content: d.description || '',
     }));
   }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 interface ApprovalModalProps {
+  executionId?: string;
   nodeId: string;
   nodeLabel: string;
   actionDescription: string;
@@ -10,6 +11,7 @@ interface ApprovalModalProps {
 }
 
 export default function ApprovalModal({
+  executionId,
   nodeId,
   nodeLabel,
   actionDescription,
@@ -22,6 +24,7 @@ export default function ApprovalModal({
     if (ws && ws.readyState === 1) {
       ws.send(JSON.stringify({
         type: 'approve',
+        executionId,
         nodeId,
         decidedBy: 'user',
         decision: 'Approved by user',
@@ -34,6 +37,7 @@ export default function ApprovalModal({
     if (ws && ws.readyState === 1) {
       ws.send(JSON.stringify({
         type: 'reject',
+        executionId,
         nodeId,
         decidedBy: 'user',
         decision: 'Rejected by user',

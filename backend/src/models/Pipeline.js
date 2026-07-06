@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const NodeDataSchema = new mongoose.Schema({
   value: { type: String },
   systemPrompt: { type: String },
-  model: { type: String, enum: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'gemini-2.0-flash', 'gemini-2.0-pro', 'gemini-1.5-pro'] },
+  model: { type: String, enum: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-pro', 'gemini-1.5-pro'] },
   maxTokens: { type: Number, default: 1024 },
   temperature: { type: Number, min: 0, max: 1, default: 1 },
   serverId: { type: String },
@@ -11,7 +11,6 @@ const NodeDataSchema = new mongoose.Schema({
   args: { type: Map, of: mongoose.Schema.Types.Mixed },
   leftHandle: { type: String },
   operator: { type: String, enum: ['==', '!=', '>', '<', 'contains'] },
-  value: { type: String },
   label: { type: String },
   riskLevel: { type: String, enum: ['safe', 'reversible', 'irreversible'], default: 'safe' },
 }, { _id: false });

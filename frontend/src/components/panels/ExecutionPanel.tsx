@@ -22,7 +22,9 @@ export default function ExecutionPanel() {
         setOutput((prev) => prev + msg.delta);
       }
       if (msg.type === 'node:complete') {
-        setOutput((prev) => prev + (msg.output || ''));
+        if (msg.nodeType === 'output') {
+          setOutput((prev) => prev + (msg.output || ''));
+        }
         setCost((prev) => prev + (msg.actualCost || 0));
       }
       if (msg.type === 'node:error') {

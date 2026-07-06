@@ -17,9 +17,11 @@ Browser (React + React Flow)
   ├── RiskClassifier (safe / reversible / irreversible)
   ├── ApprovalQueue (promise-based human-in-the-loop)
   ├── ClaudeService (Anthropic streaming)
-  └── MCPClientManager (Filesystem, Brave Search, GitHub)
+  ├── GeminiService (Google Gemini streaming)
+  ├── FirecrawlService (web search + scraping, direct REST)
+  └── MCPClientManager (Filesystem, GitHub)
         │
-  MongoDB ────── Claude API ────── MCP Servers
+  MongoDB ────── Claude API ────── Gemini API ────── MCP Servers
 ```
 
 ## Quick Start
@@ -42,14 +44,16 @@ docker run -d -p 27017:27017 --name agentguard-mongo mongo:7
 
 ## Features
 
-- **5 node types:** Input, Claude AI, MCP Tool, Condition, Output
-- **Live streaming:** Claude tokens stream via WebSocket with real-time cost
+- **7 node types:** Input, Claude AI, Gemini AI, Firecrawl, MCP Tool, Condition, Output
+- **Live streaming:** Claude & Gemini tokens stream via WebSocket with real-time cost
 - **Cost tracking:** Pre-run estimates + actual cost per model
 - **Approval gates:** Irreversible actions pause for human review
 - **Audit trail:** Every execution logged to MongoDB, exportable as JSON/CSV
-- **MCP integration:** Filesystem, Brave Search, GitHub tools
+- **MCP integration:** Filesystem, GitHub tools
+- **Firecrawl integration:** Web search, scrape, and interact (direct REST, not MCP)
 - **Pipeline sharing:** UUID-based shareable links
 - **Run history:** Past executions with cost and duration
+- **Condition branching:** True/false routing based on runtime values
 
 ## Deployment
 

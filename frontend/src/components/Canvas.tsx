@@ -1,14 +1,16 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import ReactFlow, {
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   addEdge,
-  useNodesState,
-  useEdgesState,
   applyNodeChanges,
   applyEdgeChanges,
+  Node,
+  Edge,
 } from 'reactflow';
+import { NodeData, Node as PipelineNode } from '../types/pipeline';
 import 'reactflow/dist/style.css';
 import { usePipelineStore } from '../store/pipelineStore';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -31,97 +33,61 @@ const nodeTypes = {
 };
 
 export default function Canvas() {
-  const { nodes, edges, setNodes, setEdges, addNode, addEdge: storeAddEdge, deleteNode, deleteEdge, setSelectedNode, updateNodeData } = usePipelineStore();
-  const [rfNodes, setNodesState, onNodesChangeRF] = useNodesState(nodes);
-  const [rfEdges, setEdgesState, onEdgesChangeRF] = useEdgesState(edges);
+  const {
+    nodes, edges, setNodes, setEdges,
+    addNode, addEdge: storeAddEdge, deleteNode, deleteEdge,
+    setSelectedNode, updateNodeData,
+  } = usePipelineStore();
   const ws = useWebSocket();
-  const rfNodesRef = useRef(rfNodes);
-  rfNodesRef.current = rfNodes;
 
   useEffect(() => {
     if (!ws) return;
     const handle = (event: MessageEvent) => {
       const msg = JSON.parse(event.data);
-      const cur = rfNodesRef.current;
-      if (msg.type === 'node:complete') {
-        const rfNode = cur.find(n => n.id === msg.nodeId);
-        if (rfNode?.type === 'output' && msg.output) {
-          const updated = cur.map(n =>
-            n.id === msg.nodeId
-              ? { ...n, data: { ...n.data, lastOutput: msg.output } }
-              : n
-          );
-          setNodesState(updated);
-          updateNodeData(msg.nodeId, { lastOutput: msg.output });
-        }
+      if (msg.type === 'node:complete' && msg.output) {
+        updateNodeData(msg.nodeId, { lastOutput: msg.output });
       }
       if (msg.type === 'execution:started') {
-        const updated = cur.map(n =>
-          n.type === 'output'
-            ? { ...n, data: { ...n.data, lastOutput: '' } }
-            : n
+        nodes.filter(n => n.type === 'output').forEach(n =>
+          updateNodeData(n.id, { lastOutput: '' })
         );
-        setNodesState(updated);
-        cur.filter(n => n.type === 'output').forEach(n => updateNodeData(n.id, { lastOutput: '' }));
       }
     };
     ws.addEventListener('message', handle);
     return () => ws.removeEventListener('message', handle);
-  }, [ws, setNodesState, updateNodeData]);
+  }, [ws, updateNodeData, nodes]);
 
   const onNodesChange = useCallback(
-    (changes: any) => {
-      setNodesState((prev: any[]) => {
-        const updated = applyNodeChanges(changes, prev);
-        setNodes(updated);
-        return updated;
-      });
-    },
-    [setNodes, setNodesState]
+    (changes: any) => setNodes(applyNodeChanges(changes, nodes as Node<NodeData>[]) as unknown as PipelineNode[]),
+    [nodes, setNodes]
   );
 
   const onEdgesChange = useCallback(
-    (changes: any) => {
-      setEdgesState((prev: any[]) => {
-        const updated = applyEdgeChanges(changes, prev);
-        setEdges(updated);
-        return updated;
-      });
-    },
-    [setEdges, setEdgesState]
+    (changes: any) => setEdges(applyEdgeChanges(changes, edges as Edge[]) as typeof edges),
+    [edges, setEdges]
   );
 
   const onNodesDelete = useCallback(
-    (deleted: any[]) => {
-      for (const node of deleted) {
-        deleteNode(node.id);
-      }
-    },
+    (deleted: any[]) => deleted.forEach((node) => deleteNode(node.id)),
     [deleteNode]
   );
 
   const onEdgesDelete = useCallback(
-    (deleted: any[]) => {
-      for (const edge of deleted) {
-        deleteEdge(edge.id);
-      }
-    },
+    (deleted: any[]) => deleted.forEach((edge) => deleteEdge(edge.id)),
     [deleteEdge]
   );
 
   const onConnect = useCallback(
     (params: any) => {
-      const newEdge = {
+      storeAddEdge({
         id: `${params.source}-${params.target}-${Date.now()}`,
         source: params.source,
         target: params.target,
         sourceHandle: params.sourceHandle,
         targetHandle: params.targetHandle,
-      };
-      storeAddEdge(newEdge);
-      setEdgesState((els: any) => addEdge(params, els));
+      });
     },
-    [storeAddEdge, setEdgesState]
+    [storeAddEdge]
   );
 
   const onDrop = useCallback(
@@ -130,23 +96,17 @@ export default function Canvas() {
       const type = event.dataTransfer.getData('application/reactflow');
       if (!type) return;
 
-      const reactFlowBounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      };
+      const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const position = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
 
-      const newNode = {
+      addNode({
         id: `${type}-${Date.now()}`,
-        type,
+        type: type as PipelineNode['type'],
         position,
         data: { label: type },
-      };
-
-      addNode(newNode);
-      setNodesState((prev: any[]) => [...prev, newNode]);
+      });
     },
-    [addNode, setNodesState]
+    [addNode]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -157,8 +117,8 @@ export default function Canvas() {
   return (
     <div className="w-full h-full">
       <ReactFlow
-        nodes={rfNodes}
-        edges={rfEdges}
+        nodes={nodes}
+        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodesDelete={onNodesDelete}
@@ -172,7 +132,7 @@ export default function Canvas() {
         deleteKeyCode={['Backspace', 'Delete']}
         fitView
       >
-        <Background variant="dots" gap={16} />
+        <Background variant={BackgroundVariant.Dots} gap={16} />
         <Controls />
         <MiniMap />
       </ReactFlow>

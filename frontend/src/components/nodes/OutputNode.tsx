@@ -10,6 +10,14 @@ export default function OutputNode({ id, data, isConnectable }: NodeProps<NodeDa
     <div className="bg-white border-2 border-blue-300 rounded-lg p-3 min-w-[220px] shadow-md">
       <div className="text-xs font-bold text-blue-600 mb-2">OUTPUT</div>
 
+      <input
+        type="text"
+        value={data.label || ''}
+        onChange={(e) => updateNodeData(id, { label: e.target.value })}
+        placeholder="Output label (e.g. Claude Summary)"
+        className="w-full mb-2 px-2 py-1 border rounded text-xs font-medium"
+      />
+
       <textarea
         value={data.value || ''}
         onChange={(e) => updateNodeData(id, { value: e.target.value })}

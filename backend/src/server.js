@@ -66,31 +66,37 @@ wss.on('connection', (ws) => {
         });
         await execution.save();
 
+        const executionKey = execution._id.toString();
         const executor = new PipelineExecutor(ws, pipeline, execution._id);
-        executors.set(execution._id.toString(), executor);
+        executors.set(executionKey, executor);
 
         ws.send(JSON.stringify({ type: 'execution:started', executionId: execution._id }));
 
-        executor.execute().catch((err) => {
-          ws.send(JSON.stringify({ type: 'error', error: err.message }));
-        });
+        executor.execute()
+          .catch((err) => {
+            ws.send(JSON.stringify({ type: 'error', error: err.message }));
+          })
+          .finally(() => {
+            executors.delete(executionKey);
+          });
       }
 
       if (msg.type === 'abort') {
         const executor = executors.get(msg.executionId);
         if (executor) {
           executor.abort();
+          executors.delete(msg.executionId);
           ws.send(JSON.stringify({ type: 'execution:aborted' }));
         }
       }
 
       if (msg.type === 'approve') {
-        await approvalQueue.approveNode(msg.nodeId, msg.decidedBy, msg.decision);
+        await approvalQueue.approveNode(msg.executionId, msg.nodeId, msg.decidedBy, msg.decision);
         ws.send(JSON.stringify({ type: 'node:approved', nodeId: msg.nodeId }));
       }
 
       if (msg.type === 'reject') {
-        await approvalQueue.rejectNode(msg.nodeId, msg.decidedBy, msg.decision);
+        await approvalQueue.rejectNode(msg.executionId, msg.nodeId, msg.decidedBy, msg.decision);
         ws.send(JSON.stringify({ type: 'node:rejected', nodeId: msg.nodeId }));
       }
     } catch (err) {

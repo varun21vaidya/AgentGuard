@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePipelineStore } from '../store/pipelineStore';
 import { useWebSocket } from './useWebSocket';
 import { Pipeline } from '../types/pipeline';
@@ -11,6 +11,22 @@ export function useExecution() {
   const nodes = usePipelineStore(s => s.nodes);
   const edges = usePipelineStore(s => s.edges);
   const setPipeline = usePipelineStore(s => s.setPipeline);
+
+  useEffect(() => {
+    if (!ws) return;
+    const handle = (event: MessageEvent) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'execution:started') {
+        setExecutionId(msg.executionId);
+        setStatus('running');
+      }
+      if (msg.type === 'pipeline:complete') setStatus('complete');
+      if (msg.type === 'pipeline:error' || msg.type === 'error') setStatus('error');
+      if (msg.type === 'execution:aborted') { setStatus('idle'); setExecutionId(null); }
+    };
+    ws.addEventListener('message', handle);
+    return () => ws.removeEventListener('message', handle);
+  }, [ws]);
 
   const runPipeline = useCallback(
     async (pipeline: Pipeline | null) => {

@@ -24,6 +24,7 @@ export class PipelineExecutor {
 
     try {
       const order = this.topologicalSort(nodes, edges);
+      const skipped = new Set();
 
       const estimates = {};
       for (const node of nodes) {
@@ -38,6 +39,10 @@ export class PipelineExecutor {
 
       for (const nodeId of order) {
         if (this.aborted) break;
+        if (skipped.has(nodeId)) {
+          this.emit({ type: 'node:skipped', nodeId });
+          continue;
+        }
 
         const node = nodes.find(n => n.id === nodeId);
         const inputs = this.collectInputs(nodeId, edges);
@@ -48,11 +53,22 @@ export class PipelineExecutor {
           const result = await this.executeNode(node, inputs);
           this.results[nodeId] = result;
 
+          if (node.type === 'condition' && result.branchTaken) {
+            const untakenHandle = result.branchTaken === 'true' ? 'false' : 'true';
+            const untakenEdges = edges.filter(
+              e => e.source === nodeId && e.sourceHandle === untakenHandle
+            );
+            for (const edge of untakenEdges) {
+              this.markDownstreamSkipped(edge.target, nodes, edges, skipped);
+            }
+          }
+
           await auditLogger.logNodeComplete(this.executionId, nodeId, result);
 
           this.emit({
             type: 'node:complete',
             nodeId,
+            nodeType: node.type,
             output: result.output,
             actualCost: result.actualCost,
             durationMs: result.durationMs,
@@ -88,6 +104,22 @@ export class PipelineExecutor {
     }
   }
 
+  markDownstreamSkipped(startNodeId, nodes, edges, skipped) {
+    const queue = [startNodeId];
+    while (queue.length > 0) {
+      const id = queue.shift();
+      if (skipped.has(id)) continue;
+
+      const incoming = edges.filter(e => e.target === id);
+      const hasLiveIncoming = incoming.some(e => !skipped.has(e.source) && e.source !== startNodeId);
+      if (hasLiveIncoming && id !== startNodeId) continue;
+
+      skipped.add(id);
+      const outgoing = edges.filter(e => e.source === id);
+      for (const edge of outgoing) queue.push(edge.target);
+    }
+  }
+
   async executeNode(node, inputs) {
     const startTime = Date.now();
     let actualCost = 0;
@@ -105,10 +137,12 @@ export class PipelineExecutor {
 
         if (riskLevel === 'irreversible') {
           const approval = await approvalQueue.waitForApproval(
+            this.ws,
             this.executionId,
             node.id,
             node.data,
-            'Claude call marked as irreversible'
+            'Claude call marked as irreversible',
+            riskLevel
           );
           if (!approval) throw new Error('Approval denied or timed out');
         }
@@ -135,10 +169,12 @@ export class PipelineExecutor {
 
         if (riskLevel === 'irreversible') {
           const approval = await approvalQueue.waitForApproval(
+            this.ws,
             this.executionId,
             node.id,
             node.data,
-            'Gemini call marked as irreversible'
+            'Gemini call marked as irreversible',
+            riskLevel
           );
           if (!approval) throw new Error('Approval denied or timed out');
         }
@@ -165,10 +201,12 @@ export class PipelineExecutor {
 
         if (riskLevel === 'irreversible') {
           const approval = await approvalQueue.waitForApproval(
+            this.ws,
             this.executionId,
             node.id,
             node.data,
-            `Firecrawl ${action}: ${node.data.query || node.data.url || ''}`
+            `Firecrawl ${action}: ${node.data.query || node.data.url || ''}`,
+            riskLevel
           );
           if (!approval) throw new Error('Approval denied or timed out');
         }
@@ -204,17 +242,18 @@ export class PipelineExecutor {
 
         if (riskLevel === 'irreversible') {
           const approval = await approvalQueue.waitForApproval(
+            this.ws,
             this.executionId,
             node.id,
             node.data,
-            `MCP call: ${node.data.serverId}/${node.data.toolName}`
+            `MCP call: ${node.data.serverId}/${node.data.toolName}`,
+            riskLevel
           );
           if (!approval) throw new Error('Approval denied or timed out');
         }
 
         const client = mcpClientManager.getClient(node.data.serverId);
-        const argsJson = this.interpolate(JSON.stringify(node.data.args || {}), inputs);
-        const args = JSON.parse(argsJson);
+        const args = this.interpolateObject(node.data.args || {}, inputs);
 
         const result = await client.callTool({
           name: node.data.toolName,
@@ -230,17 +269,22 @@ export class PipelineExecutor {
         const right = node.data.value || '';
         const op = node.data.operator;
 
-        let condition = false;
+        let conditionResult = false;
         switch (op) {
-          case '==': condition = left === right; break;
-          case '!=': condition = left !== right; break;
-          case '>': condition = parseFloat(left) > parseFloat(right); break;
-          case '<': condition = parseFloat(left) < parseFloat(right); break;
-          case 'contains': condition = String(left).includes(right); break;
+          case '==': conditionResult = left === right; break;
+          case '!=': conditionResult = left !== right; break;
+          case '>': conditionResult = parseFloat(left) > parseFloat(right); break;
+          case '<': conditionResult = parseFloat(left) < parseFloat(right); break;
+          case 'contains': conditionResult = String(left).includes(right); break;
         }
 
-        output = condition ? left : '';
-        break;
+        output = left;
+        return {
+          output,
+          actualCost: 0,
+          durationMs: Date.now() - startTime,
+          branchTaken: conditionResult ? 'true' : 'false',
+        };
       }
 
       case 'output': {
@@ -306,6 +350,20 @@ export class PipelineExecutor {
     return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
       return inputs[key] || inputs.input || '';
     });
+  }
+
+  interpolateObject(obj, inputs) {
+    const result = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'string') {
+        result[key] = this.interpolate(value, inputs);
+      } else if (typeof value === 'object' && value !== null) {
+        result[key] = this.interpolateObject(value, inputs);
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
   }
 
   emit(data) {

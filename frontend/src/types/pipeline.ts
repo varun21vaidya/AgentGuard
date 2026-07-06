@@ -33,6 +33,15 @@ export interface NodeData {
   operator?: '==' | '!=' | '>' | '<' | 'contains';
   riskLevel?: 'safe' | 'reversible' | 'irreversible';
   lastOutput?: string;
+  /** Firecrawl fields */
+  action?: 'search' | 'scrape' | 'interact';
+  query?: string;
+  url?: string;
+  limit?: number;
+  /** MCP Tool fields */
+  actions?: Array<{ type: string; selector?: string; value?: string }>;
+  status?: 'idle' | 'running' | 'done' | 'error';
+  output?: string;
 }
 
 export interface Edge {

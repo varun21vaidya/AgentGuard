@@ -35,6 +35,7 @@ export default function GeminiNode({ id, data, isConnectable }: NodeProps<Gemini
         onChange={(e) => updateNodeData(id, { model: e.target.value })}
         className="w-full mb-2 px-2 py-1 border rounded text-xs"
       >
+        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
         <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
         <option value="gemini-2.0-pro">Gemini 2.0 Pro</option>
         <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>

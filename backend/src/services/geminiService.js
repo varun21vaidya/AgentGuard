@@ -1,13 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export class GeminiService {
-  constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-  }
-
   async streamCompletion({ systemPrompt, model, maxTokens, temperature, prompt, onDelta }) {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
     const modelName = this.mapModel(model);
-    const geminiModel = this.genAI.getGenerativeModel({ model: modelName });
+    const geminiModel = genAI.getGenerativeModel({ model: modelName });
 
     const generationConfig = {
       maxOutputTokens: maxTokens || 1024,
@@ -41,6 +38,7 @@ export class GeminiService {
     let actualCostUsd = 0;
     if (usage) {
       const rates = {
+        'gemini-2.5-flash': { input: 0.15, output: 0.60 },
         'gemini-2.0-flash': { input: 0.10, output: 0.40 },
         'gemini-2.0-pro': { input: 1.25, output: 5.0 },
         'gemini-1.5-pro': { input: 1.25, output: 5.0 },
@@ -63,6 +61,7 @@ export class GeminiService {
 
   mapModel(model) {
     const mapping = {
+      'gemini-2.5-flash': 'gemini-2.5-flash',
       'gemini-2.0-flash': 'gemini-2.0-flash',
       'gemini-2.0-pro': 'gemini-2.0-pro-exp-02-05',
       'gemini-1.5-pro': 'gemini-1.5-pro',
