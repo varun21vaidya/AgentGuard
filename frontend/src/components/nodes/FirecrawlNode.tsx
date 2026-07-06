@@ -15,9 +15,10 @@ interface FirecrawlNodeData extends NodeData {
 
 const statusColors: Record<string, string> = {
   idle: 'border-gray-300',
-  running: 'border-yellow-500 bg-yellow-50',
+  running: 'border-green-500 bg-green-50',
   done: 'border-green-500 bg-green-50',
   error: 'border-red-500 bg-red-50',
+  skipped: 'border-gray-300 bg-gray-100 opacity-50',
 };
 
 export default function FirecrawlNode({ id, data, isConnectable }: NodeProps<FirecrawlNodeData>) {

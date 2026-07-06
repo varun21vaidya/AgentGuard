@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { NodeData } from '../../types/pipeline';
 import CostBadge from '../common/CostBadge';
+import RiskBadge from '../common/RiskBadge';
 
 interface GeminiNodeData extends NodeData {
   streamOutput?: string;
@@ -16,6 +17,7 @@ const statusColors: Record<string, string> = {
   running: 'border-blue-500 bg-blue-50',
   done: 'border-green-500 bg-green-50',
   error: 'border-red-500 bg-red-50',
+  skipped: 'border-gray-300 bg-gray-100 opacity-50',
 };
 
 export default function GeminiNode({ id, data, isConnectable }: NodeProps<GeminiNodeData>) {
@@ -26,7 +28,10 @@ export default function GeminiNode({ id, data, isConnectable }: NodeProps<Gemini
   return (
     <div className={`bg-white border-2 rounded-lg p-3 min-w-[250px] shadow-md ${statusColors[status]}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-bold text-blue-600 mb-2">GEMINI AI</div>
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-bold text-blue-600">GEMINI AI</div>
+          <RiskBadge level={data.riskLevel || 'safe'} />
+        </div>
         <CostBadge estimatedCost={data.estimatedCost} actualCost={data.actualCost} />
       </div>
 

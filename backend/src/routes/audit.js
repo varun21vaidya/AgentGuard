@@ -2,11 +2,16 @@ import express from 'express';
 import Execution from '../models/Execution.js';
 import Approval from '../models/Approval.js';
 import CostLog from '../models/CostLog.js';
+import Pipeline from '../models/Pipeline.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get('/:pipelineId', async (req, res) => {
   try {
+    const pipeline = await Pipeline.findOne({ _id: req.params.pipelineId, createdBy: req.user.id });
+    if (!pipeline) return res.status(404).json({ error: 'Not found' });
     const executions = await Execution.find({ pipelineId: req.params.pipelineId })
       .sort({ createdAt: -1 })
       .limit(50);
@@ -21,6 +26,9 @@ router.get('/execution/:executionId', async (req, res) => {
     const execution = await Execution.findById(req.params.executionId);
     if (!execution) return res.status(404).json({ error: 'Not found' });
 
+    const pipeline = await Pipeline.findOne({ _id: execution.pipelineId, createdBy: req.user.id });
+    if (!pipeline) return res.status(403).json({ error: 'Forbidden' });
+
     const approvals = await Approval.find({ executionId: req.params.executionId });
     const costs = await CostLog.find({ executionId: req.params.executionId });
 
@@ -32,6 +40,8 @@ router.get('/execution/:executionId', async (req, res) => {
 
 router.get('/:pipelineId/export/json', async (req, res) => {
   try {
+    const pipeline = await Pipeline.findOne({ _id: req.params.pipelineId, createdBy: req.user.id });
+    if (!pipeline) return res.status(404).json({ error: 'Not found' });
     const executions = await Execution.find({ pipelineId: req.params.pipelineId })
       .sort({ createdAt: -1 });
 
@@ -53,6 +63,8 @@ router.get('/:pipelineId/export/json', async (req, res) => {
 
 router.get('/:pipelineId/export/csv', async (req, res) => {
   try {
+    const pipeline = await Pipeline.findOne({ _id: req.params.pipelineId, createdBy: req.user.id });
+    if (!pipeline) return res.status(404).json({ error: 'Not found' });
     const executions = await Execution.find({ pipelineId: req.params.pipelineId })
       .sort({ createdAt: -1 });
 

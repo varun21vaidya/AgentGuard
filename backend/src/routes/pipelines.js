@@ -1,7 +1,28 @@
 import express from 'express';
 import Pipeline from '../models/Pipeline.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
+import { STARTER_TEMPLATES } from '../data/templates.js';
 
 const router = express.Router();
+router.use(requireAuth);
+
+router.get('/templates/list', (req, res) => {
+  res.json(STARTER_TEMPLATES.map(({ name, description }) => ({ name, description })));
+});
+
+router.post('/templates/:name/instantiate', async (req, res) => {
+  const template = STARTER_TEMPLATES.find(t => t.name === req.params.name);
+  if (!template) return res.status(404).json({ error: 'Template not found' });
+
+  const pipeline = await Pipeline.create({
+    name: template.name,
+    description: template.description,
+    nodes: template.nodes,
+    edges: template.edges,
+    createdBy: req.user.id,
+  });
+  res.status(201).json(pipeline);
+});
 
 router.get('/', async (req, res) => {
   try {
@@ -9,12 +30,12 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = page * limit;
 
-    const pipelines = await Pipeline.find()
+    const pipelines = await Pipeline.find({ createdBy: req.user.id })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Pipeline.countDocuments();
+    const total = await Pipeline.countDocuments({ createdBy: req.user.id });
     res.json({ pipelines, total, page, limit });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,17 +44,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const pipeline = await Pipeline.findById(req.params.id);
-    if (!pipeline) return res.status(404).json({ error: 'Not found' });
-    res.json(pipeline);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/share/:shareId', async (req, res) => {
-  try {
-    const pipeline = await Pipeline.findOne({ shareId: req.params.shareId });
+    const pipeline = await Pipeline.findOne({ _id: req.params.id, createdBy: req.user.id });
     if (!pipeline) return res.status(404).json({ error: 'Not found' });
     res.json(pipeline);
   } catch (err) {
@@ -49,6 +60,7 @@ router.post('/', async (req, res) => {
       description: description || '',
       nodes: nodes || [],
       edges: edges || [],
+      createdBy: req.user.id,
     });
     res.status(201).json(pipeline);
   } catch (err) {
@@ -59,8 +71,8 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { name, description, nodes, edges, isPublic, tags } = req.body;
-    const pipeline = await Pipeline.findByIdAndUpdate(
-      req.params.id,
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user.id },
       { name, description, nodes, edges, isPublic, tags },
       { new: true }
     );
@@ -73,7 +85,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await Pipeline.findByIdAndDelete(req.params.id);
+    const result = await Pipeline.findOneAndDelete({ _id: req.params.id, createdBy: req.user.id });
     if (!result) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted' });
   } catch (err) {

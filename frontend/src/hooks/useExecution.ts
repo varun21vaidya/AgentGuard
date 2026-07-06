@@ -29,19 +29,15 @@ export function useExecution() {
   }, [ws]);
 
   const runPipeline = useCallback(
-    async (pipeline: Pipeline | null) => {
+    async (pipeline: Pipeline | null): Promise<{ ok: boolean; error?: string }> => {
       if (!pipeline || !pipeline._id) {
-        alert('Please save the pipeline first');
-        return;
+        return { ok: false, error: 'Please save the pipeline first' };
       }
 
       if (!ws || ws.readyState !== WebSocket.OPEN) {
-        alert('WebSocket not connected. Is the backend running on port 3001?');
-        console.error('[Run] WS not ready. State:', ws?.readyState);
-        return;
+        return { ok: false, error: 'WebSocket not connected' };
       }
 
-      // Save latest nodes/edges to backend before running
       try {
         const saved = await updatePipeline(pipeline._id, { ...pipeline, nodes, edges });
         setPipeline(saved);
@@ -55,6 +51,8 @@ export function useExecution() {
         type: 'execute',
         pipelineId: pipeline._id,
       }));
+
+      return { ok: true };
     },
     [ws, nodes, edges, setPipeline]
   );

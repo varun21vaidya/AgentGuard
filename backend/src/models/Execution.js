@@ -19,7 +19,7 @@ const NodeResultSchema = new mongoose.Schema({
 const ExecutionSchema = new mongoose.Schema({
   pipelineId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pipeline', required: true },
   pipelineName: { type: String },
-  status: { type: String, enum: ['running', 'complete', 'error', 'aborted'], default: 'running' },
+  status: { type: String, enum: ['running', 'complete', 'error', 'aborted', 'dry-run'], default: 'running' },
   nodeResults: { type: [NodeResultSchema], default: [] },
   totalEstimatedCost: { type: Number, default: 0 },
   totalActualCost: { type: Number, default: 0 },

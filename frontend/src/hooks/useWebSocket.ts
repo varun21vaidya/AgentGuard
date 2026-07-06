@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 
 let wsInstance: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempts = 0;
 const listeners = new Set<(ws: WebSocket) => void>();
 
 function onInstanceReady(cb: (ws: WebSocket) => void) {
@@ -15,11 +16,13 @@ function onInstanceReady(cb: (ws: WebSocket) => void) {
 
 function createConnection() {
   if (wsInstance) return;
-  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
-  const socket = new WebSocket(wsUrl);
+  const token = localStorage.getItem('agentguard_token');
+  const base = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
+  const socket = new WebSocket(`${base}?token=${token}`);
 
   socket.onopen = () => {
     console.log('[WS] Connected');
+    reconnectAttempts = 0;
     wsInstance = socket;
     listeners.forEach(cb => cb(socket));
     listeners.clear();
@@ -29,7 +32,8 @@ function createConnection() {
     console.log('[WS] Disconnected');
     wsInstance = null;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(createConnection, 3000);
+    reconnectTimer = setTimeout(createConnection, Math.min(1000 * 2 ** (reconnectAttempts || 0), 15000));
+    reconnectAttempts = (reconnectAttempts || 0) + 1;
   };
 
   socket.onerror = () => {};

@@ -7,21 +7,36 @@ import dotenv from 'dotenv';
 import { PipelineExecutor } from './services/orchestrator.js';
 import { mcpClientManager } from './services/mcpClientManager.js';
 import { approvalQueue } from './services/approvalQueue.js';
+import { checkRateLimit } from './middleware/rateLimiter.js';
+import { verifyWsToken } from './middleware/authMiddleware.js';
 import pipelinesRouter from './routes/pipelines.js';
+import publicRouter from './routes/public.js';
 import auditRouter from './routes/audit.js';
+import authRouter from './routes/auth.js';
 import Pipeline from './models/Pipeline.js';
 import Execution from './models/Execution.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
+if (!process.env.FRONTEND_URL) {
+  console.error('[STARTUP] FRONTEND_URL not set — refusing to start with open CORS.');
+  process.exit(1);
+}
+if (!process.env.JWT_SECRET) {
+  console.error('[STARTUP] JWT_SECRET not set.');
+  process.exit(1);
+}
+
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+app.use(cors({ origin: process.env.FRONTEND_URL }));
 app.use(express.json());
 
+app.use('/api/auth', authRouter);
+app.use('/api/public', publicRouter);
 app.use('/api/pipelines', pipelinesRouter);
 app.use('/api/audit', auditRouter);
 
@@ -46,28 +61,49 @@ app.use(errorHandler);
 
 const executors = new Map();
 
-wss.on('connection', (ws) => {
-  console.log('[WS] Client connected');
+wss.on('connection', (ws, req) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const token = url.searchParams.get('token');
+  const payload = verifyWsToken(token);
+
+  if (!payload) {
+    ws.send(JSON.stringify({ type: 'error', error: 'Unauthorized' }));
+    ws.close();
+    return;
+  }
+
+  ws.userId = payload.sub;
+  console.log('[WS] Client connected:', payload.email);
 
   ws.on('message', async (raw) => {
     try {
       const msg = JSON.parse(raw);
 
       if (msg.type === 'execute') {
-        const pipeline = await Pipeline.findById(msg.pipelineId);
+        const pipeline = await Pipeline.findOne({ _id: msg.pipelineId, createdBy: ws.userId });
         if (!pipeline) {
           ws.send(JSON.stringify({ type: 'error', error: 'Pipeline not found' }));
+          return;
+        }
+
+        const rateCheck = checkRateLimit(ws.userId);
+        if (!rateCheck.allowed) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            error: `Rate limited. Retry in ${Math.ceil(rateCheck.retryAfterMs / 1000)}s.`,
+          }));
           return;
         }
 
         const execution = new Execution({
           pipelineId: msg.pipelineId,
           pipelineName: pipeline.name,
+          status: msg.dryRun ? 'dry-run' : 'running',
         });
         await execution.save();
 
         const executionKey = execution._id.toString();
-        const executor = new PipelineExecutor(ws, pipeline, execution._id);
+        const executor = new PipelineExecutor(ws, pipeline, execution._id, { dryRun: !!msg.dryRun });
         executors.set(executionKey, executor);
 
         ws.send(JSON.stringify({ type: 'execution:started', executionId: execution._id }));

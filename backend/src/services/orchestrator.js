@@ -10,13 +10,14 @@ import Execution from '../models/Execution.js';
 import Approval from '../models/Approval.js';
 
 export class PipelineExecutor {
-  constructor(ws, pipelineDoc, executionId) {
+  constructor(ws, pipelineDoc, executionId, options = {}) {
     this.ws = ws;
     this.pipelineDoc = pipelineDoc;
     this.executionId = executionId;
     this.results = {};
     this.aborted = false;
     this.startTime = Date.now();
+    this.dryRun = options.dryRun || false;
   }
 
   async execute() {
@@ -36,6 +37,10 @@ export class PipelineExecutor {
         }
       }
       this.emit({ type: 'pipeline:estimates', estimates });
+
+      if (this.dryRun) {
+        return this.executeDryRun(order, nodes, edges, estimates);
+      }
 
       for (const nodeId of order) {
         if (this.aborted) break;
@@ -102,6 +107,60 @@ export class PipelineExecutor {
       );
       throw err;
     }
+  }
+
+  async executeDryRun(order, nodes, edges, estimates) {
+    const report = {
+      totalEstimatedCost: 0,
+      nodesWouldRun: [],
+      nodesWouldSkip: [],
+      approvalsWouldTrigger: [],
+      warnings: [],
+    };
+
+    const skipped = new Set();
+
+    for (const nodeId of order) {
+      const node = nodes.find(n => n.id === nodeId);
+
+      if (skipped.has(nodeId)) {
+        report.nodesWouldSkip.push({ nodeId, type: node.type, reason: 'unreached condition branch' });
+        continue;
+      }
+
+      const effectiveRisk = riskClassifier.getEffectiveRisk(node.data);
+
+      if (effectiveRisk === 'irreversible') {
+        report.approvalsWouldTrigger.push({
+          nodeId, nodeType: node.type, label: node.data.label || nodeId,
+          reason: `Would require approval — risk level: ${effectiveRisk}`,
+        });
+      }
+
+      if (estimates[nodeId]) {
+        report.totalEstimatedCost += estimates[nodeId].estimatedCostUsd;
+      }
+
+      if (node.type === 'condition') {
+        report.warnings.push({
+          nodeId,
+          message: 'Condition branch outcome depends on runtime data — both branches shown as reachable in dry run',
+        });
+      }
+
+      if (node.type === 'mcpTool' && (!node.data.serverId || !node.data.toolName)) {
+        report.warnings.push({ nodeId, message: 'MCP node has no server/tool selected — would fail at runtime' });
+      }
+
+      report.nodesWouldRun.push({ nodeId, type: node.type, estimatedCost: estimates[nodeId]?.estimatedCostUsd || 0 });
+    }
+
+    this.emit({ type: 'dryrun:complete', report });
+    await Execution.updateOne(
+      { _id: this.executionId },
+      { status: 'complete', completedAt: new Date() }
+    );
+    return report;
   }
 
   markDownstreamSkipped(startNodeId, nodes, edges, skipped) {

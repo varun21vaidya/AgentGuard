@@ -1,56 +1,75 @@
 const BASE = '';
 
-export async function fetchPipelines(page = 0, limit = 20) {
-  const res = await fetch(`${BASE}/api/pipelines?page=${page}&limit=${limit}`);
+function authHeaders() {
+  const token = localStorage.getItem('agentguard_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function authFetch(url: string, options: RequestInit = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(), ...options.headers } as Record<string, string>,
+  });
+  if (res.status === 401) {
+    localStorage.removeItem('agentguard_token');
+    window.location.reload();
+  }
   return res.json();
+}
+
+export async function fetchPipelines(page = 0, limit = 20) {
+  return authFetch(`${BASE}/api/pipelines?page=${page}&limit=${limit}`);
 }
 
 export async function fetchPipeline(id: string) {
-  const res = await fetch(`${BASE}/api/pipelines/${id}`);
-  return res.json();
+  return authFetch(`${BASE}/api/pipelines/${id}`);
 }
 
 export async function fetchPipelineByShareId(shareId: string) {
-  const res = await fetch(`${BASE}/api/pipelines/share/${shareId}`);
+  const res = await fetch(`${BASE}/api/public/pipelines/share/${shareId}`);
   return res.json();
 }
 
 export async function createPipeline(data: Record<string, unknown>) {
-  const res = await fetch(`${BASE}/api/pipelines`, {
+  return authFetch(`${BASE}/api/pipelines`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return res.json();
 }
 
 export async function updatePipeline(id: string, data: Record<string, unknown>) {
-  const res = await fetch(`${BASE}/api/pipelines/${id}`, {
+  return authFetch(`${BASE}/api/pipelines/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return res.json();
 }
 
 export async function deletePipeline(id: string) {
-  const res = await fetch(`${BASE}/api/pipelines/${id}`, {
+  return authFetch(`${BASE}/api/pipelines/${id}`, {
     method: 'DELETE',
   });
-  return res.json();
 }
 
 export async function fetchMcpServers() {
-  const res = await fetch(`${BASE}/api/mcp/servers`);
-  return res.json();
+  return authFetch(`${BASE}/api/mcp/servers`);
 }
 
 export async function fetchMcpTools(serverId: string) {
-  const res = await fetch(`${BASE}/api/mcp/tools/${serverId}`);
-  return res.json();
+  return authFetch(`${BASE}/api/mcp/tools/${serverId}`);
 }
 
 export async function fetchAudit(pipelineId: string) {
-  const res = await fetch(`${BASE}/api/audit/${pipelineId}`);
-  return res.json();
+  return authFetch(`${BASE}/api/audit/${pipelineId}`);
+}
+
+export async function fetchTemplates() {
+  return authFetch(`${BASE}/api/pipelines/templates/list`);
+}
+
+export async function instantiateTemplate(name: string) {
+  return authFetch(`${BASE}/api/pipelines/templates/${encodeURIComponent(name)}/instantiate`, {
+    method: 'POST',
+  });
 }

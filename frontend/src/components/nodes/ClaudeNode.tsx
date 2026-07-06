@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps } from 'reactflow';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { NodeData } from '../../types/pipeline';
 import CostBadge from '../common/CostBadge';
+import RiskBadge from '../common/RiskBadge';
 
 interface ClaudeNodeData extends NodeData {
   streamOutput?: string;
@@ -16,6 +17,7 @@ const statusColors: Record<string, string> = {
   running: 'border-purple-500 bg-purple-50',
   done: 'border-green-500 bg-green-50',
   error: 'border-red-500 bg-red-50',
+  skipped: 'border-gray-300 bg-gray-100 opacity-50',
 };
 
 export default function ClaudeNode({ id, data, isConnectable }: NodeProps<ClaudeNodeData>) {
@@ -27,7 +29,10 @@ export default function ClaudeNode({ id, data, isConnectable }: NodeProps<Claude
   return (
     <div className={`bg-white border-2 rounded-lg p-3 min-w-[250px] shadow-md ${statusColors[status]}`}>
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-bold text-purple-600">Claude AI</div>
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-bold text-purple-600">Claude AI</div>
+          <RiskBadge level={data.riskLevel || 'safe'} />
+        </div>
         <CostBadge estimatedCost={data.estimatedCost} actualCost={data.actualCost} />
       </div>
 
