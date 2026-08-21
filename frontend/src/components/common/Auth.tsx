@@ -11,7 +11,7 @@ export default function Auth({ onAuthenticated }: AuthProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
-  const API_BASE = import.meta.env.VITE_API_URL || '';
+  const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
