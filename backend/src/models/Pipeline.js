@@ -13,6 +13,11 @@ const NodeDataSchema = new mongoose.Schema({
   operator: { type: String, enum: ['==', '!=', '>', '<', 'contains'] },
   label: { type: String },
   riskLevel: { type: String, enum: ['safe', 'reversible', 'irreversible'], default: 'safe' },
+  action: { type: String, enum: ['search', 'scrape', 'interact'] },
+  query: { type: String },
+  url: { type: String },
+  limit: { type: Number },
+  actions: { type: [mongoose.Schema.Types.Mixed] },
 }, { _id: false });
 
 const NodeSchema = new mongoose.Schema({
