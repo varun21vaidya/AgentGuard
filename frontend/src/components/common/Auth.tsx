@@ -11,11 +11,13 @@ export default function Auth({ onAuthenticated }: AuthProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
+  const API_BASE = import.meta.env.VITE_API_URL || '';
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch(`/api/auth/${mode}`, {
+      const res = await fetch(`${API_BASE}/api/auth/${mode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name }),
