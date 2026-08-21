@@ -1,6 +1,6 @@
 {
   "build": {
-    "builder": "NIX"
+    "builder": "RAILPACK"
   },
   "deploy": {
     "startCommand": "cd backend && npm install && npm start",
