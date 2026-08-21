@@ -3,9 +3,8 @@ const MODEL_RATES = {
   'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
   'claude-haiku-4-5-20251001': { input: 0.8, output: 4.0 },
   'gemini-2.5-flash': { input: 0.15, output: 0.60 },
-  'gemini-2.0-flash': { input: 0.10, output: 0.40 },
-  'gemini-2.0-pro': { input: 1.25, output: 5.0 },
-  'gemini-1.5-pro': { input: 1.25, output: 5.0 },
+  'gemini-3.6-flash': { input: 0.15, output: 0.60 },
+  'gemini-3.6-pro': { input: 1.25, output: 5.0 },
 };
 
 const ESTIMATED_TOKENS_PER_CHAR = 0.25;
@@ -51,7 +50,7 @@ export class CostEstimator {
 
   estimateGeminiCall(nodeData) {
     const systemPrompt = nodeData.systemPrompt || '';
-    const model = nodeData.model || 'gemini-2.0-flash';
+    const model = nodeData.model || 'gemini-2.5-flash';
     const maxTokens = nodeData.maxTokens || 1024;
 
     const systemTokens = this.estimateTokens(systemPrompt);
@@ -86,14 +85,14 @@ export class CostEstimator {
         };
       }
     }
-    if (model === 'gemini-2.0-pro') {
-      const flashRates = MODEL_RATES['gemini-2.0-flash'];
-      const proRates = MODEL_RATES['gemini-2.0-pro'];
+    if (model === 'gemini-3.6-pro') {
+      const flashRates = MODEL_RATES['gemini-3.6-flash'];
+      const proRates = MODEL_RATES['gemini-3.6-pro'];
 
       const savings = actual * (1 - (flashRates.output / proRates.output));
       if (savings > 0.01) {
         return {
-          suggestion: 'Try gemini-2.0-flash to reduce costs',
+          suggestion: 'Try gemini-3.6-flash to reduce costs',
           potentialSavings: Math.round(savings * 10000) / 10000,
           savingsPercent: Math.round((savings / actual) * 100),
         };

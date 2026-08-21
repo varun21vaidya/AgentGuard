@@ -240,7 +240,7 @@ export class PipelineExecutor {
 
         const result = await geminiService.streamCompletion({
           systemPrompt: node.data.systemPrompt || '',
-          model: node.data.model || 'gemini-2.0-flash',
+          model: node.data.model || 'gemini-2.5-flash',
           maxTokens: node.data.maxTokens || 1024,
           temperature: node.data.temperature || 1,
           prompt,
@@ -274,6 +274,11 @@ export class PipelineExecutor {
           case 'search': {
             const query = this.interpolate(node.data.query || '', inputs);
             const results = await firecrawlService.search(query, node.data.limit || 10);
+            if (!results.length) {
+              throw new Error(
+                `Firecrawl search returned 0 results for "${query}". Check FIRECRAWL_API_KEY on the server.`
+              );
+            }
             output = results.map(r => `[${r.title}](${r.url})\n${r.description}`).join('\n\n');
             break;
           }

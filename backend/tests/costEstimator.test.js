@@ -46,7 +46,7 @@ describe('CostEstimator', () => {
   describe('estimateGeminiCall', () => {
     it('estimates flash with default params', () => {
       const est = estimator.estimateGeminiCall({});
-      expect(est.model).toBe('gemini-2.0-flash');
+      expect(est.model).toBe('gemini-2.5-flash');
       expect(est.estimatedCostUsd).toBeGreaterThan(0);
     });
 
@@ -63,9 +63,9 @@ describe('CostEstimator', () => {
     });
 
     it('calculates flash cost', () => {
-      const cost = estimator.calculateActualCost('gemini-2.0-flash', { input_tokens: 2000, output_tokens: 1000 });
-      // (2000/1e6)*0.1 + (1000/1e6)*0.4 = 0.0002 + 0.0004 = 0.0006
-      expect(cost).toBe(0.0006);
+      const cost = estimator.calculateActualCost('gemini-2.5-flash', { input_tokens: 2000, output_tokens: 1000 });
+      // (2000/1e6)*0.15 + (1000/1e6)*0.6 = 0.0003 + 0.0006 = 0.0009
+      expect(cost).toBe(0.0009);
     });
 
     it('throws for unknown model', () => {
@@ -92,7 +92,7 @@ describe('CostEstimator', () => {
     });
 
     it('suggests flash when using pro', () => {
-      const suggestion = estimator.suggestOptimization('gemini-2.0-pro', { estimatedCostUsd: 1 }, 0.5);
+      const suggestion = estimator.suggestOptimization('gemini-3.6-pro', { estimatedCostUsd: 1 }, 0.5);
       expect(suggestion).not.toBeNull();
       expect(suggestion.suggestion).toContain('flash');
     });

@@ -39,11 +39,10 @@ export class GeminiService {
     if (usage) {
       const rates = {
         'gemini-2.5-flash': { input: 0.15, output: 0.60 },
-        'gemini-2.0-flash': { input: 0.10, output: 0.40 },
-        'gemini-2.0-pro': { input: 1.25, output: 5.0 },
-        'gemini-1.5-pro': { input: 1.25, output: 5.0 },
+        'gemini-3.6-flash': { input: 0.15, output: 0.60 },
+        'gemini-3.6-pro': { input: 1.25, output: 5.0 },
       };
-      const rate = rates[model] || rates['gemini-2.0-flash'];
+      const rate = rates[model] || rates['gemini-2.5-flash'];
       const inputCost = ((usage.promptTokenCount || 0) / 1_000_000) * rate.input;
       const outputCost = ((usage.candidatesTokenCount || 0) / 1_000_000) * rate.output;
       actualCostUsd = Math.round((inputCost + outputCost) * 10000) / 10000;
@@ -62,11 +61,10 @@ export class GeminiService {
   mapModel(model) {
     const mapping = {
       'gemini-2.5-flash': 'gemini-2.5-flash',
-      'gemini-2.0-flash': 'gemini-2.0-flash',
-      'gemini-2.0-pro': 'gemini-2.0-pro-exp-02-05',
-      'gemini-1.5-pro': 'gemini-1.5-pro',
+      'gemini-3.6-flash': 'gemini-3.6-flash',
+      'gemini-3.6-pro': 'gemini-3.6-pro',
     };
-    return mapping[model] || 'gemini-2.0-flash';
+    return mapping[model] || 'gemini-2.5-flash';
   }
 }
 
