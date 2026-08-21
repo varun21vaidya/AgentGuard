@@ -5,9 +5,8 @@ export function getWebSocket(): WebSocket | null {
     return wsInstance;
   }
 
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const host = window.location.host;
-  const socket = new WebSocket(`${protocol}://${host}/ws`);
+  const wsUrl = import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
+  const socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
     console.log('[WS] Connected');
