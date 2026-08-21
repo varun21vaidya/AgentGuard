@@ -1,0 +1,8 @@
+{
+  "name": "agentguard",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build:frontend": "cd frontend && npm install && npm run build"
+  }
+}

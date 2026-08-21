@@ -40,7 +40,7 @@ export interface NodeData {
   limit?: number;
   /** MCP Tool fields */
   actions?: Array<{ type: string; selector?: string; value?: string }>;
-  status?: 'idle' | 'running' | 'done' | 'error';
+  status?: 'idle' | 'running' | 'done' | 'error' | 'skipped';
   output?: string;
 }
 

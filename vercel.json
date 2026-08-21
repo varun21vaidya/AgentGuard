@@ -1,11 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
-  "framework": "vite",
-  "regions": ["iad1"],
-  "env": {
-    "FRONTEND_URL": "@frontend-url"
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "installCommand": "npm install",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "framework": "vite"
+    }
   }
 }
