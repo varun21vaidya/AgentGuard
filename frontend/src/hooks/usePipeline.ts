@@ -36,11 +36,13 @@ export function usePipeline() {
   const loadPipeline = useCallback(
     async (idOrShareId: string) => {
       try {
+        const base = import.meta.env.VITE_API_URL || '';
         const url = idOrShareId.length === 24
-          ? `/api/pipelines/${idOrShareId}`
-          : `/api/pipelines/share/${idOrShareId}`;
+          ? `${base}/api/pipelines/${idOrShareId}`
+          : `${base}/api/public/pipelines/share/${idOrShareId}`;
 
         const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to load pipeline (${response.status})`);
         const data = await response.json();
         setPipeline(data);
       } catch (err) {

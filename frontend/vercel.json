@@ -4,5 +4,15 @@
   "installCommand": "npm ci --include=dev",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://agentguard-production-4534.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/ws",
+      "destination": "https://agentguard-production-4534.up.railway.app/ws"
+    }
+  ]
 }

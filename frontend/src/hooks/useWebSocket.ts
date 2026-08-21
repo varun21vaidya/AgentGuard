@@ -17,8 +17,10 @@ function onInstanceReady(cb: (ws: WebSocket) => void) {
 function createConnection() {
   if (wsInstance) return;
   const token = localStorage.getItem('agentguard_token');
-  const base = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
-  const socket = new WebSocket(`${base}?token=${token}`);
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const base = import.meta.env.VITE_WS_URL || `${wsProtocol}://${window.location.host}/ws`;
+  const url = base.endsWith('/ws') ? base : `${base.replace(/\/$/, '')}/ws`;
+  const socket = new WebSocket(`${url}?token=${token}`);
 
   socket.onopen = () => {
     console.log('[WS] Connected');
